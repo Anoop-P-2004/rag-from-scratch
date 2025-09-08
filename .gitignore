@@ -1,4 +1,11 @@
 .env
 .ipynb_checkpoints/
-temp.pdf
+rag/temp.pdf
 __pycache__/
+db.sqlite3
+*.log
+local_settings.py
+.venv/
+media/
+*.sql
+*.sql.gz

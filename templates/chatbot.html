@@ -1,0 +1,326 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DocuMind</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+  <style>
+    /* Typewriter effect */
+    .typewriter {
+      border-right: 2px solid #333;
+      white-space: nowrap;
+      overflow: hidden;
+      display: inline-block;
+    }
+    
+    .cursive {
+      font-family: 'Pacifico', cursive;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col bg-gradient-to-br from-gray-100 to-gray-300 font-sans">
+
+  <!-- Top bar -->
+  <div class="flex justify-between items-center bg-indigo-600 text-white px-4 py-3 shadow-lg">
+    <button id="menuBtn" class="p-2 focus:outline-none text-2xl">&#9776;</button>
+    <h1 class="text-xl font-bold">DocuMind - understand documents with AI</h1>
+    <a href="{% url 'accounts:logout' %}" 
+       class="w-10 h-10 flex items-center justify-center rounded-full bg-red-500 hover:bg-red-600 transition">
+      ⎋
+    </a>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar"
+       class="fixed top-0 left-0 h-full w-64 bg-gray-900 text-white transform -translate-x-full transition-transform duration-300 shadow-lg z-20">
+    <div class="p-4">
+      <button id="newChatBtn" class="w-full py-2 mb-6 bg-indigo-500 rounded-lg hover:bg-indigo-600 transition">+ New Chat</button>
+      <h2 class="text-lg font-semibold mb-4 border-b border-gray-700 pb-2">History</h2>
+      <ul id="chatHistory" class="space-y-2"></ul>
+    </div>
+  </div>
+
+  <!-- Overlay for sidebar -->
+  <div id="overlay" class="hidden fixed inset-0 bg-black opacity-40 z-10"></div>
+
+  <!-- Chat container -->
+  <div class="flex-1 overflow-y-auto p-6 relative" id="chatContainer">
+    <div id="welcomeSection" class="text-center mt-20">
+        <p id="welcomeMsg" class="text-6xl font-bold mb-4 typewriter cursive bg-gradient-to-r from-orange-400 via-pink-500 to-sky-500 bg-clip-text text-transparent">
+        </p>
+      <div id="uploadSection" class="mt-6">
+        <input type="file" id="pdfInput" class="hidden">
+        <label for="pdfInput"
+               class="px-6 py-2 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white rounded-lg cursor-pointer hover:opacity-90 transition">
+          📄 Select PDF
+        </label>
+        <p id="fileSelectedMsg" class="mt-2 text-sm text-gray-700 italic"></p>
+        <button id="uploadBtn" class="ml-3 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+          Upload
+        </button>
+        <!-- Progress bar -->
+        <div id="progressBar" class="hidden w-full bg-gray-300 rounded mt-6 max-w-md mx-auto">
+          <div id="progress" class="bg-blue-600 text-xs text-center p-1 leading-none rounded w-0">0%</div>
+        </div>
+      </div>
+      
+    </div>
+    <div id="messages" class="space-y-4 max-w-3xl mx-auto"></div>
+  </div>
+
+  <!-- Message input -->
+  <div class="p-4 bg-white border-t flex items-center shadow-lg">
+    <input type="text" id="messageInput" 
+           class="flex-1 border rounded-lg px-4 py-2 mr-2 focus:outline-none focus:ring focus:ring-indigo-300"
+           placeholder="Type your message..." disabled>
+    <button id="sendBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition" disabled>Send</button>
+  </div>
+  <!-- Modal for entering title -->
+<div id="titleModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden z-30">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+    <h2 class="text-lg font-semibold mb-4">Enter a title for your document</h2>
+    <input type="text" id="docTitle" 
+            class="w-full border rounded px-3 py-2 mb-4 focus:outline-none focus:ring focus:ring-indigo-300" 
+            placeholder="Document title">
+    <div class="flex justify-end gap-3">
+        <button id="cancelTitleBtn" 
+                class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 transition">Cancel</button>
+        <button id="confirmTitleBtn" 
+                class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">Confirm</button>
+    </div>
+    </div>
+</div>
+  
+
+<script>
+  const menuBtn = document.getElementById("menuBtn");
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.getElementById("overlay");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const pdfInput = document.getElementById("pdfInput");
+  const progressBar = document.getElementById("progressBar");
+  const progress = document.getElementById("progress");
+  const messageInput = document.getElementById("messageInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const chatHistory = document.getElementById("chatHistory");
+  const messagesDiv = document.getElementById("messages");
+  const welcomeSection = document.getElementById("welcomeSection");
+  const titleModal = document.getElementById("titleModal");
+  const docTitleInput = document.getElementById("docTitle");
+  let currentChatId = null;
+  const fileSelectedMsg = document.getElementById("fileSelectedMsg");
+
+  pdfInput.addEventListener("change", () => {
+    if (pdfInput.files.length > 0) {
+      const fileName = pdfInput.files[0].name;
+      fileSelectedMsg.textContent = `Selected file "${fileName}"`;
+    } else {
+      fileSelectedMsg.textContent = "";
+    }
+  });
+
+  // ---- CSRF Helper ----
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === name + "=") {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie("csrftoken");
+
+  // Sidebar toggle
+  menuBtn.addEventListener("click", () => {
+    sidebar.classList.toggle("-translate-x-full");
+    overlay.classList.toggle("hidden");
+  });
+  overlay.addEventListener("click", () => {
+    sidebar.classList.add("-translate-x-full");
+    overlay.classList.add("hidden");
+  });
+
+  // Typewriter effect
+  const welcomeMsg = document.getElementById("welcomeMsg");
+  const text = "Hello {{ user.username }}";
+  let i = 0;
+  function typeWriter() {
+    if (i < text.length) {
+      welcomeMsg.textContent += text.charAt(i);
+      i++;
+      setTimeout(typeWriter, 100);
+    }
+  }
+  typeWriter();
+
+  // Load chat history
+  async function loadHistory() {
+    const res = await fetch("/chat/api/chats/");
+    if (!res.ok) return;
+    const chats = await res.json();
+    chatHistory.innerHTML = "";
+    chats.forEach(c => {
+      const li = document.createElement("li");
+      li.textContent = c.title;
+      li.className = "p-2 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 transition";
+      li.addEventListener("click", () => {
+        loadMessages(c.chat_id);
+        currentChatId = c.chat_id;
+        messageInput.disabled = false;
+        sendBtn.disabled = false;
+        welcomeSection.style.display = "none";
+        sidebar.classList.add("-translate-x-full");
+        overlay.classList.add("hidden");
+      });
+      chatHistory.appendChild(li);
+    });
+  }
+
+  // Show modal when clicking Upload
+  uploadBtn.addEventListener("click", () => {
+    const file = pdfInput.files[0];
+    if (!file) {
+      alert("Please select a PDF first.");
+      return;
+    }
+    docTitleInput.value = file.name.replace(/\.[^/.]+$/, "");
+    titleModal.classList.remove("hidden");
+  });
+
+  // Cancel modal
+  document.getElementById("cancelTitleBtn").addEventListener("click", () => {
+    titleModal.classList.add("hidden");
+  });
+
+  // Confirm Upload
+  document.getElementById("confirmTitleBtn").addEventListener("click", async () => {
+    const file = pdfInput.files[0];
+    const title = docTitleInput.value.trim();
+    if (!title) {
+      alert("Please enter a title.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("title", title);
+
+    progressBar.classList.remove("hidden");
+    progress.style.width = "0%";
+    progress.textContent = "0%";
+
+    try {
+      const res = await fetch("/chat/api/chats/", {
+        method: "POST",
+        body: formData,
+        headers: { "X-CSRFToken": csrftoken }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        currentChatId = data.id;
+        progress.style.width = "100%";
+        progress.textContent = "Processing Done";
+        messageInput.disabled = false;
+        sendBtn.disabled = false;
+        loadHistory();
+        loadMessages(currentChatId);
+        welcomeSection.style.display = "none";
+      } else {
+        progress.style.width = "100%";
+        progress.textContent = "Failed";
+      }
+    } catch (err) {
+      alert("Error uploading PDF");
+    }
+
+    titleModal.classList.add("hidden");
+    docTitleInput.value = "";
+  });
+
+  // Load messages
+  async function loadMessages(chatId) {
+    currentChatId = chatId;
+    const res = await fetch(`/chat/api/chats/${chatId}/messages/`);
+    if (!res.ok) return;
+    const msgs = await res.json();
+    messagesDiv.innerHTML = "";
+    msgs.forEach(m => {
+      const div = document.createElement("div");
+      div.className = m.sender === "User"
+        ? "bg-indigo-100 p-3 rounded-lg text-right shadow"
+        : "bg-green-100 p-3 rounded-lg text-left shadow";
+      div.textContent = m.content;
+      messagesDiv.appendChild(div);
+    });
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  // Send message
+  sendBtn.addEventListener("click", async () => {
+    const text = messageInput.value.trim();
+    if (!text || !currentChatId) return;
+
+    const userDiv = document.createElement("div");
+    userDiv.className = "bg-indigo-100 p-3 rounded-lg text-right shadow";
+    userDiv.textContent = text;
+    messagesDiv.appendChild(userDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    messageInput.value = "";
+
+    const res = await fetch(`/chat/api/chats/${currentChatId}/messages/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrftoken
+      },
+      body: JSON.stringify({ message: text })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const botMsg = data.bot_message;
+
+      const botDiv = document.createElement("div");
+      botDiv.className = "bg-green-100 p-3 rounded-lg text-left shadow";
+      botDiv.textContent = botMsg.content;
+      messagesDiv.appendChild(botDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  });
+
+  // Send on Enter
+  messageInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendBtn.click();
+    }
+  });
+
+  // New chat
+  document.getElementById("newChatBtn").addEventListener("click", () => {
+    currentChatId = null;
+    messagesDiv.innerHTML = "";
+    messageInput.disabled = true;
+    sendBtn.disabled = true;
+    welcomeSection.style.display = "block";
+    sidebar.classList.add("-translate-x-full");
+    overlay.classList.add("hidden");
+  });
+
+  // Load history on start
+  loadHistory();
+</script>
+
+  
+</body>
+</html>

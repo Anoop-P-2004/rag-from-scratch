@@ -7,13 +7,14 @@ This project is a **RAG (Retrieval-Augmented Generation)** pipeline that lets us
 - ✅ BERT embeddings for semantic search
 - ✅ FAISS for fast similarity retrieval
 - ✅ Gemini (Google Generative AI) for answer generation
-- ✅ Streamlit UI that looks and feels like ChatGPT
+- ✅ Django backend + MySQL for authentication and persistent chat history
+- ✅ An alternate Streamlit UI (just run rag/chatbot.py)
 
-For more details regarding model, do refer rag.ipynb file
+For more details regarding model, do refer ![rag/rag.ipynb file](rag/rag.ipynb) 
 
 ---
 
-## 🧱 Class Overview (in `main.py`)
+## 🧱 Class Overview (in `rag/main.py`)
 
 ### `DocLoader`
 - Loads and cleans text from each page of a PDF using PyMuPDF (`fitz`).
@@ -44,13 +45,49 @@ For more details regarding model, do refer rag.ipynb file
 
 ---
 
+## 🏛️ Architecture Diagrams
+
+### Activity Diagram
+
+![Activity Diagram](system_diagrams/Activity.png)
+
+### Class Diagram
+
+![Class Diagram](system_diagrams/Class.png)
+
+### ER Diagram
+
+![ER Diagram](system_diagrams/ER.png)
+
+### Sequence Diagram
+
+![Sequence Diagram](system_diagrams/Sequence.png)
+
 ## 🚀 Running the App
   1. **Install dependencies**
+      <pre> ```bash 
+      pip install -r requirements.txt``` </pre>
+  2. **Configure Environment Variables**
+  
+  create a .env file and add the following:
+  <pre>```env
+  DB_NAME="chatbot"
+  DB_USER="root"
+  DB_PASSWORD=yourpassword
+  GEMINI_API_KEY=your_gemini_api_key```
+  </pre>
+  3. **Setup Database**
 
-        pip install -r requirements.txt
-  2. **Add your API key to .env**
-  3. **Start the app**
+  - Create a new MySql Database
+  <pre>```mysql
+  create database chatbot;```
+  </pre>
+  - Run Migrations
+  <pre>```bash
+  python manage.py migrate```
+  </pre>
 
-        streamlit run chatbot.py
-
-
+  4. Run Server
+  <pre>```bash
+  python manage.py runserver```
+  </pre>

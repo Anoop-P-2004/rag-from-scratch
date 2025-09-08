@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="center-container">
+    <div>
+        <h1 class="mb-4 text-white">DocuMind – understand documents with AI</h1>
+        
+        <p class="text-light lead">
+            DocuMind is an intelligent document assistant built on a Retrieval-Augmented Generation (RAG) pipeline. 
+            It preprocesses PDFs into meaningful chunks, retrieves relevant sections using BERT and FAISS, 
+            and generates context-aware, citation-supported responses with Gemini. 
+            Designed to demonstrate the practical integration of modern NLP techniques for academic and professional use.
+        </p>
+
+        <div class="d-flex justify-content-center gap-3 mt-4">
+            <a href="{% url 'accounts:signup' %}" class="btn btn-primary btn-lg">Get Started</a>
+            <a href="{% url 'accounts:login' %}" class="btn btn-outline-light btn-lg">Login</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

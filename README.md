@@ -1,6 +1,6 @@
 # 🤖 Chat with Your PDF – RAG From Scratch
 
-![Chat UI](screenshots/chat1.png)
+![Chat UI](screenshots/home.png)
 
 This project is a **RAG (Retrieval-Augmented Generation)** pipeline that lets users upload a PDF and chat with it using natural language questions. It combines:
 
@@ -65,29 +65,32 @@ For more details regarding model, do refer ![rag/rag.ipynb file](rag/rag.ipynb)
 
 ## 🚀 Running the App
   1. **Install dependencies**
-      <pre> ```bash 
-      pip install -r requirements.txt``` </pre>
-  2. **Configure Environment Variables**
+      ```bash 
+      pip install -r requirements.txt
+      ```
+      
+  3. **Configure Environment Variables**
   
   create a .env file and add the following:
-  <pre>```env
+  ```env
   DB_NAME="chatbot"
   DB_USER="root"
   DB_PASSWORD=yourpassword
-  GEMINI_API_KEY=your_gemini_api_key```
-  </pre>
+  GEMINI_API_KEY=your_gemini_api_key
+  ```
+  
   3. **Setup Database**
 
   - Create a new MySql Database
-  <pre>```mysql
-  create database chatbot;```
-  </pre>
+  ```mysql
+  create database chatbot;
+  ```
+  
   - Run Migrations
-  <pre>```bash
-  python manage.py migrate```
-  </pre>
-
+  ```bash
+  python manage.py migrate
+```
   4. Run Server
-  <pre>```bash
-  python manage.py runserver```
-  </pre>
+  ```bash
+  python manage.py runserver
+  ```
